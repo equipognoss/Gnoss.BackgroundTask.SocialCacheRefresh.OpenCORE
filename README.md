@@ -4,6 +4,8 @@
 
 Aplicación de segundo plano que se encarga de invalidar las cachés de la bandeja de mensajes de un usuario cada vez que recibe un mensaje nuevo, para que las bandejas de mensajes estén siempre actualizadas. 
 
+Este servicio está escuchando la cola de nombre "ColaRefrescoCacheBandejaMensajes". Se envía un mensaje a esta cola cada vez que un usuario envía un mensaje a uno o varios destinatarios desde su bandeja de mensajes de la Web, para que este servicio se encargue de invalidar la caché de la bandeja de mensajes de todos los destinatarios.
+
 Configuración estandar de esta aplicación en el archivo docker-compose.yml: 
 
 ```yml
@@ -37,4 +39,10 @@ socialcacherefresh:
      - ./logs/socialcacherefresh:/app/logs
 ```
 
-Se pueden consultar los posibles valores de configuración de cada parámetro aquí: https://github.com/equipognoss/Gnoss.Platform.Deploy
+Se pueden consultar los posibles valores de configuración de cada parámetro aquí: https://github.com/equipognoss/Gnoss.SemanticAIPlatform.OpenCORE
+
+## Código de conducta
+Este proyecto a adoptado el código de conducta definido por "Contributor Covenant" para definir el comportamiento esperado en las contribuciones a este proyecto. Para más información ver https://www.contributor-covenant.org/
+
+## Licencia
+Este producto es parte de la plataforma [Gnoss Semantic AI Platform Open Core](https://github.com/equipognoss/Gnoss.SemanticAIPlatform.OpenCORE), es un producto open source y está licenciado bajo GPLv3.
