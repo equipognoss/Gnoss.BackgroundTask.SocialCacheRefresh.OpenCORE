@@ -2,6 +2,8 @@
 
 # Gnoss.BackgroundTask.SocialCacheRefresh.OpenCORE
 
+![](https://github.com/equipognoss/Gnoss.BackgroundTask.SocialCacheRefresh.OpenCORE/workflows/BuildSocialCacheRefresh/badge.svg)
+
 Aplicación de segundo plano que se encarga de invalidar las cachés de la bandeja de mensajes de un usuario cada vez que recibe un mensaje nuevo, para que las bandejas de mensajes estén siempre actualizadas. 
 
 Este servicio está escuchando la cola de nombre "ColaRefrescoCacheBandejaMensajes". Se envía un mensaje a esta cola cada vez que un usuario envía un mensaje a uno o varios destinatarios desde su bandeja de mensajes de la Web, para que este servicio se encargue de invalidar la caché de la bandeja de mensajes de todos los destinatarios.
