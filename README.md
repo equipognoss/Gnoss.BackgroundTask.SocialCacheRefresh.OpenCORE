@@ -12,7 +12,7 @@ Configuración estandar de esta aplicación en el archivo docker-compose.yml:
 
 ```yml
 socialcacherefresh:
-    image: gnoss/socialcacherefresh
+    image: gnoss/gnoss.backgroundtask.socialcacherefresh.opencore
     env_file: .env
     environment:
      virtuosoConnectionString_home: ${virtuosoConnectionString_home}
