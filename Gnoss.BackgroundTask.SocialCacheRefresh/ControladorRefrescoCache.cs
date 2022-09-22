@@ -101,14 +101,7 @@ namespace Es.Riam.Gnoss.Win.RefrescoCache
             #region Cargo los idiomas del ecosistema
 
             //Carga de los idiomas del ecosistema en un diccionario.
-            string[] separador = new string[] { "&&&" };
-            //string[] idiomasConfigurados = ParametroAplicacionDS.ParametroAplicacion.Select("Parametro = 'Idiomas'")[0]["Valor"].ToString().Split(separador, StringSplitOptions.RemoveEmptyEntries);
-            string[] idiomasConfigurados = GestorParametroAplicacionDS.ParametroAplicacion.Where(parametroAplicacion=>parametroAplicacion.Parametro.Equals("Idiomas")).FirstOrDefault().Valor.Split(separador, StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (string idioma in idiomasConfigurados)
-            {
-                mListaIdiomasEcosistema.Add(idioma.Split('|')[0], idioma.Split('|')[1]);
-            }
+            mListaIdiomasEcosistema = mConfigService.ObtenerListaIdiomasDictionary();
 
             #endregion
 
