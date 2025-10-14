@@ -28,6 +28,8 @@ using Es.Riam.Gnoss.AD.Virtuoso;
 using Es.Riam.Gnoss.Elementos.ParametroAplicacion;
 using Es.Riam.Gnoss.Web.Controles.ParametroAplicacionGBD;
 using Es.Riam.AbstractsOpen;
+using Microsoft.Extensions.Logging;
+using Es.Riam.Gnoss.Elementos.Suscripcion;
 
 namespace Es.Riam.Gnoss.Win.RefrescoCache
 {
@@ -45,7 +47,8 @@ namespace Es.Riam.Gnoss.Win.RefrescoCache
         private List<string> mIdiomasList = new List<string>();
 
         private int mNumeroMaxPeticionesWebSimultaneas = 5;
-        
+        private ILogger mlogger;
+        private ILoggerFactory mLoggerFactory;
 
         #endregion
 
@@ -55,11 +58,12 @@ namespace Es.Riam.Gnoss.Win.RefrescoCache
         /// Constructor
         /// </summary>
         /// <param name="pFicheroConfiguracionSitioWeb">Ruta al archivo de configuración del sitio Web</param>
-        public ControladorRefrescoCache(int pNumeroMaxPeticionesWebSimultaneas, IServiceScopeFactory scopedFactory, ConfigService configService)
-            : base(scopedFactory, configService)
+        public ControladorRefrescoCache(int pNumeroMaxPeticionesWebSimultaneas, IServiceScopeFactory scopedFactory, ConfigService configService, ILogger<ControladorRefrescoCache> logger, ILoggerFactory loggerFactory)
+            : base(scopedFactory, configService,logger,loggerFactory)
         {
             mNumeroMaxPeticionesWebSimultaneas = pNumeroMaxPeticionesWebSimultaneas;
-
+            mlogger = logger;
+            mLoggerFactory = loggerFactory;
             CargarIdiomas();
         }
 
@@ -132,7 +136,7 @@ namespace Es.Riam.Gnoss.Win.RefrescoCache
                             RealizarMantenimientoRabbitMQ(loggingService);
                         }
 
-                        BaseComunidadCN baseComunidadCN = new BaseComunidadCN(entityContext, loggingService, entityContextBASE, mConfigService, servicesUtilVirtuosoAndReplication);
+                        BaseComunidadCN baseComunidadCN = new BaseComunidadCN(entityContext, loggingService, entityContextBASE, mConfigService, servicesUtilVirtuosoAndReplication, mLoggerFactory.CreateLogger<BaseComunidadCN>(), mLoggerFactory);
                         baseComunidadCN.EliminarColaRefrescoCachePendientesRepetidas();
                         BaseComunidadDS baseComunidadDS = baseComunidadCN.ObtenerColaRefrescoCacheBandejaMensajesPendientes();
 
@@ -153,7 +157,7 @@ namespace Es.Riam.Gnoss.Win.RefrescoCache
                     }
                     catch (Exception ex)
                     {
-                        loggingService.GuardarLog("ERROR:  Excepción: " + ex.ToString() + "\n\n\tTraza: " + ex.StackTrace);
+                        loggingService.GuardarLog("ERROR:  Excepción: " + ex.ToString() + "\n\n\tTraza: " + ex.StackTrace,mlogger);
                         ControladorConexiones.CerrarConexiones();
                     }
                     finally
@@ -173,7 +177,7 @@ namespace Es.Riam.Gnoss.Win.RefrescoCache
                 RabbitMQClient.ReceivedDelegate funcionProcesarItem = new RabbitMQClient.ReceivedDelegate(ProcesarItem);
                 RabbitMQClient.ShutDownDelegate funcionShutDown = new RabbitMQClient.ShutDownDelegate(OnShutDown);
                 
-                RabbitMQClient rabbitMQClient = new RabbitMQClient(RabbitMQClient.BD_SERVICIOS_WIN, COLA_REFRESCO_CACHE, loggingService, mConfigService, EXCHANGE, COLA_REFRESCO_CACHE);
+                RabbitMQClient rabbitMQClient = new RabbitMQClient(RabbitMQClient.BD_SERVICIOS_WIN, COLA_REFRESCO_CACHE, loggingService, mConfigService, mLoggerFactory.CreateLogger<RabbitMQClient>(), mLoggerFactory, EXCHANGE, COLA_REFRESCO_CACHE);
 
                 try
                 {
@@ -183,7 +187,7 @@ namespace Es.Riam.Gnoss.Win.RefrescoCache
                 catch (Exception ex)
                 {
                     mReiniciarLecturaRabbit = true;
-                    loggingService.GuardarLogError(ex);
+                    loggingService.GuardarLogError(ex,mlogger);
                 }
             }
         }
@@ -223,7 +227,7 @@ namespace Es.Riam.Gnoss.Win.RefrescoCache
                 }
                 catch (Exception ex)
                 {
-                    loggingService.GuardarLogError(ex);
+                    loggingService.GuardarLogError(ex, mlogger);
                     return true;
                 }
                 finally
@@ -294,7 +298,7 @@ namespace Es.Riam.Gnoss.Win.RefrescoCache
         {
             // Cargar los datos del proyecto
             string urlPropiaProyecto = string.Empty;
-            ProyectoCN proyCN = new ProyectoCN(entityContext, loggingService, mConfigService, servicesUtilVirtuosoAndReplication);
+            ProyectoCN proyCN = new ProyectoCN(entityContext, loggingService, mConfigService, servicesUtilVirtuosoAndReplication, mLoggerFactory.CreateLogger<ProyectoCN>(), mLoggerFactory);
             urlPropiaProyecto = proyCN.ObtenerURLPropiaProyecto(pFilaCola.ProyectoID);
             proyCN.Dispose();
 
@@ -310,8 +314,8 @@ namespace Es.Riam.Gnoss.Win.RefrescoCache
             List<Guid> listaPerfilesDestinatarios = new List<Guid>();
 
             // Por cada idioma debemos calculas las cachés de las bandejas del usuario.
-            IdentidadCN identCN = new IdentidadCN(entityContext, loggingService, mConfigService, servicesUtilVirtuosoAndReplication);
-            PersonaCN personaCN = new PersonaCN(entityContext, loggingService, mConfigService, servicesUtilVirtuosoAndReplication);
+            IdentidadCN identCN = new IdentidadCN(entityContext, loggingService, mConfigService, servicesUtilVirtuosoAndReplication, mLoggerFactory.CreateLogger<IdentidadCN>(), mLoggerFactory);
+            PersonaCN personaCN = new PersonaCN(entityContext, loggingService, mConfigService, servicesUtilVirtuosoAndReplication, mLoggerFactory.CreateLogger<PersonaCN>(), mLoggerFactory);
 
             Guid identidadID = new Guid();
 
@@ -469,7 +473,7 @@ namespace Es.Riam.Gnoss.Win.RefrescoCache
                 {
                     //Fallo tras el segundo reintento...
                     pFilaCola.Estado = 1;
-                    loggingService.GuardarLog("Error al refrescar los resultados la fila " + pFilaCola.ColaID + " ERROR:  Excepción: " + ex.ToString() + "\n\n\tTraza: " + ex.StackTrace);
+                    loggingService.GuardarLog("Error al refrescar los resultados la fila " + pFilaCola.ColaID + " ERROR:  Excepción: " + ex.ToString() + "\n\n\tTraza: " + ex.StackTrace, mlogger);
                 }
             }
         }
@@ -495,7 +499,7 @@ namespace Es.Riam.Gnoss.Win.RefrescoCache
                 {
                     //Fallo tras el segundo reintento...
                     pFilaCola.Estado = 1;
-                    loggingService.GuardarLog("Error al refrescar los resultados la fila " + pFilaCola.ColaID + " ERROR:  Excepción: " + ex.ToString() + "\n\n\tTraza: " + ex.StackTrace);
+                    loggingService.GuardarLog("Error al refrescar los resultados la fila " + pFilaCola.ColaID + " ERROR:  Excepción: " + ex.ToString() + "\n\n\tTraza: " + ex.StackTrace, mlogger);
                 }
             }
         }
@@ -506,7 +510,7 @@ namespace Es.Riam.Gnoss.Win.RefrescoCache
         /// <param name="pPerfiles">Lista de perfiles que han recibido un correo.</param>
         private void AgregarNotificacionCorreoNuevoAIdentidades(List<Guid> pPerfiles, EntityContext entityContext, LoggingService loggingService, VirtuosoAD virtuosoAD, IServicesUtilVirtuosoAndReplication servicesUtilVirtuosoAndReplication)
         {
-            LiveCN liveCN = new LiveCN(entityContext, loggingService, mConfigService, servicesUtilVirtuosoAndReplication);
+            LiveCN liveCN = new LiveCN(entityContext, loggingService, mConfigService, servicesUtilVirtuosoAndReplication, mLoggerFactory.CreateLogger<LiveCN>(), mLoggerFactory);
             foreach (Guid perfilID in pPerfiles)
             {
                 liveCN.AumentarContadorNuevosMensajes(perfilID);
@@ -518,9 +522,9 @@ namespace Es.Riam.Gnoss.Win.RefrescoCache
 
         private void EstablecerNumeroMensajesSinLeer(Guid pPerfilID, EntityContext entityContext, LoggingService loggingService, VirtuosoAD virtuosoAD, IServicesUtilVirtuosoAndReplication servicesUtilVirtuosoAndReplication)
         {
-            LiveCN liveCN = new LiveCN(entityContext, loggingService, mConfigService, servicesUtilVirtuosoAndReplication);
-            FacetadoAD facetadoAD = new FacetadoAD(mFicheroConfiguracionHomeBD, mUrlIntragnoss, loggingService, entityContext, mConfigService, virtuosoAD, servicesUtilVirtuosoAndReplication);
-            IdentidadCN identidadCN = new IdentidadCN(entityContext, loggingService, mConfigService, servicesUtilVirtuosoAndReplication);
+            LiveCN liveCN = new LiveCN(entityContext, loggingService, mConfigService, servicesUtilVirtuosoAndReplication, mLoggerFactory.CreateLogger<LiveCN>(), mLoggerFactory);
+            FacetadoAD facetadoAD = new FacetadoAD(mFicheroConfiguracionHomeBD, mUrlIntragnoss, loggingService, entityContext, mConfigService, virtuosoAD, servicesUtilVirtuosoAndReplication, mLoggerFactory.CreateLogger<FacetadoAD>(), mLoggerFactory);
+            IdentidadCN identidadCN = new IdentidadCN(entityContext, loggingService, mConfigService, servicesUtilVirtuosoAndReplication, mLoggerFactory.CreateLogger<IdentidadCN>(), mLoggerFactory);
 
             Guid? identidadID = identidadCN.ObtenerIdentidadIDDePerfilEnProyecto(ProyectoAD.MetaProyecto, pPerfilID);
 
@@ -596,7 +600,7 @@ namespace Es.Riam.Gnoss.Win.RefrescoCache
 
         protected override ControladorServicioGnoss ClonarControlador()
         {
-            return new ControladorRefrescoCache(mNumeroMaxPeticionesWebSimultaneas, ScopedFactory, mConfigService);
+            return new ControladorRefrescoCache(mNumeroMaxPeticionesWebSimultaneas, ScopedFactory, mConfigService, mLoggerFactory.CreateLogger<ControladorRefrescoCache>(), mLoggerFactory);
         }
 
         #endregion

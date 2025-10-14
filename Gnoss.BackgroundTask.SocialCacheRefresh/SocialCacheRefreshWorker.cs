@@ -1,3 +1,4 @@
+using Es.Riam.Gnoss.Elementos.Suscripcion;
 using Es.Riam.Gnoss.Servicios;
 using Es.Riam.Gnoss.Util.Configuracion;
 using Es.Riam.Gnoss.Win.RefrescoCache;
@@ -14,14 +15,16 @@ namespace Gnoss.BackgroundTask.SocialCacheRefresh
 {
     public class SocialCacheRefreshWorker : Worker
     {
-        private readonly ILogger<SocialCacheRefreshWorker> _logger;
         private readonly ConfigService _configService;
+        private ILogger mlogger;
+        private ILoggerFactory mLoggerFactory;
 
-        public SocialCacheRefreshWorker(ILogger<SocialCacheRefreshWorker> logger, ConfigService configService, IServiceScopeFactory scopeFactory) 
+        public SocialCacheRefreshWorker(ConfigService configService, IServiceScopeFactory scopeFactory, ILogger<SocialCacheRefreshWorker> logger, ILoggerFactory loggerFactory) 
             : base(logger, scopeFactory)
         {
-            _logger = logger;
             _configService = configService;
+            mlogger = logger;
+            mLoggerFactory = loggerFactory;
         }
 
         protected override List<ControladorServicioGnoss> ObtenerControladores()
@@ -29,7 +32,7 @@ namespace Gnoss.BackgroundTask.SocialCacheRefresh
             List<ControladorServicioGnoss> controladores = new List<ControladorServicioGnoss>();
             int numMaxPeticionesWebSimultaneas = _configService.ObtenerNumMaxPeticionesWebSimultaneas();
 
-            controladores.Add(new ControladorRefrescoCache(numMaxPeticionesWebSimultaneas, ScopedFactory, _configService));
+            controladores.Add(new ControladorRefrescoCache(numMaxPeticionesWebSimultaneas, ScopedFactory, _configService, mLoggerFactory.CreateLogger<ControladorRefrescoCache>(), mLoggerFactory));
             return controladores;
         }
     }
