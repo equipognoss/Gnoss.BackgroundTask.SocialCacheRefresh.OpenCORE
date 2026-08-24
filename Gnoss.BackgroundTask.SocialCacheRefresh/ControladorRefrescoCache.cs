@@ -110,67 +110,9 @@ namespace Es.Riam.Gnoss.Win.RefrescoCache
             #endregion
 
             RealizarMantenimientoRabbitMQ(loggingService);
-            //RealizarMantenimientoBD();
         }
 
-        private void RealizarMantenimientoBD()
-        {
-            while (true)
-            {
-                using (var scope = ScopedFactory.CreateScope())
-                {
-                    EntityContext entityContext = scope.ServiceProvider.GetRequiredService<EntityContext>();
-                    EntityContextBASE entityContextBASE = scope.ServiceProvider.GetRequiredService<EntityContextBASE>();
-                    UtilidadesVirtuoso utilidadesVirtuoso = scope.ServiceProvider.GetRequiredService<UtilidadesVirtuoso>();
-                    LoggingService loggingService = scope.ServiceProvider.GetRequiredService<LoggingService>();
-                    VirtuosoAD virtuosoAD = scope.ServiceProvider.GetRequiredService<VirtuosoAD>();
-                    RedisCacheWrapper redisCacheWrapper = scope.ServiceProvider.GetRequiredService<RedisCacheWrapper>();
-                    UtilPeticion utilPeticion = scope.ServiceProvider.GetRequiredService<UtilPeticion>();
-                    IServicesUtilVirtuosoAndReplication servicesUtilVirtuosoAndReplication = scope.ServiceProvider.GetRequiredService<IServicesUtilVirtuosoAndReplication>();
-                    try
-                    {
-                        ComprobarCancelacionHilo();
-
-                        if (mReiniciarLecturaRabbit)
-                        {
-                            RealizarMantenimientoRabbitMQ(loggingService);
-                        }
-
-                        BaseComunidadCN baseComunidadCN = new BaseComunidadCN(entityContext, loggingService, entityContextBASE, mConfigService, servicesUtilVirtuosoAndReplication, mLoggerFactory.CreateLogger<BaseComunidadCN>(), mLoggerFactory);
-                        baseComunidadCN.EliminarColaRefrescoCachePendientesRepetidas();
-                        BaseComunidadDS baseComunidadDS = baseComunidadCN.ObtenerColaRefrescoCacheBandejaMensajesPendientes();
-
-                        foreach (BaseComunidadDS.ColaRefrescoCacheRow filaCola in baseComunidadDS.ColaRefrescoCache.Rows)
-                        {
-                            ProcesarFilasDeColaRefrescoCache(filaCola, entityContext, loggingService, virtuosoAD, utilPeticion, utilidadesVirtuoso, servicesUtilVirtuosoAndReplication);
-
-                            baseComunidadCN.AcutalizarEstadoColaRefrescoCache(filaCola.ColaID, filaCola.Estado);
-
-                        }
-
-                        ComprobarCancelacionHilo();
-                    }
-                    catch (ThreadAbortException) { }
-                    catch (OperationCanceledException)
-                    {
-                        break;
-                    }
-                    catch (Exception ex)
-                    {
-                        loggingService.GuardarLog("ERROR:  Excepción: " + ex.ToString() + "\n\n\tTraza: " + ex.StackTrace,mlogger);
-                        ControladorConexiones.CerrarConexiones();
-                    }
-                    finally
-                    {
-                        //Duermo el proceso el tiempo establecido
-                        Thread.Sleep(INTERVALO_SEGUNDOS * 1000);
-                    }
-                }
-            }
-            ControladorConexiones.CerrarConexiones();
-        }
-
-        private void RealizarMantenimientoRabbitMQ(LoggingService loggingService, bool reintentar = true)
+        private void RealizarMantenimientoRabbitMQ(LoggingService loggingService)
         {
             if (mConfigService.ExistRabbitConnection(RabbitMQClient.BD_SERVICIOS_WIN))
             {
